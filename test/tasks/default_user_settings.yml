@@ -1,0 +1,87 @@
+- name: create users. send keys. encrypt home
+  remote_user: root
+  block:
+    - name: add group
+      group:
+        name: "{{item.user}}"
+        state: present
+        gid: "{{item.group_id}}"
+      with_items:
+        - { user: "{{UNAME}}", group_id: "{{ User_id }}" }
+        - { user: "{{BKP}}", group_id: "{{BKP_grp_id}}" }
+
+    - name: add user
+      user:
+        name: "{{item.user}}"
+        password: "{{ user_password | password_hash('sha512') }}"
+        uid: "{{item.user_id}}"
+        group: "{{item.user}}"
+        state: present
+        update_password: on_create
+        home: "/home/{{item.user}}"
+        shell: /bin/bash
+      with_items:
+        - { user: "{{UNAME}}", user_id: "{{User_id}}" }
+        - { user: "{{BKP}}", user_id: "{{BKP_id}}" }
+
+    - name: create home directory for users
+      file:
+        path: "/home/{{item.user}}"
+        owner: "{{item.user}}"
+        group: "{{item.user}}"
+        mode: 0700
+        state: directory
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+    - name: create .ssh dir
+      file:
+        path: "/home/{{item.user}}/.ssh"
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: 0700
+        state: directory
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+#    - name: create authorized_keys for users
+#      file:
+#        path: "/home/{{item.user}}/.ssh/authorized_keys"
+#        owner: "{{ item.user }}"
+#        group: "{{ item.user }}"
+#        mode: 0600
+#        state: touch
+#      with_items:
+#        - { user: "{{UNAME}}" }
+#        - { user: "{{BKP}}" }
+
+#    - name: Set authorized key for users copying it from current user
+#      ansible.posix.authorized_key:
+#        user: "{{item}}"
+#        state: present
+#        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+#      with_items:
+#        - "{{UNAME}}"
+#        - "{{BKP}}"
+
+#    - name: send public key
+#      ansible.posix.authorized_key:
+#        user: "{{ item.user }}"
+#        state: present
+#        key: "{{ lookup('file', '{{host_keys}}/{{item.user}}/id_rsa.pub') }}"
+#      with_items:
+#        - { user: "{{UNAME}}" }
+#        - { user: "{{BKP}}" }
+
+    - name: add admin to admin group
+      shell: usermod -aG adm,sudo {{UNAME}}
+
+    - name: create backups dir
+      file:
+        path: "/home/{{ BKP }}/backups"
+        owner: "{{ BKP }}"
+        group: "{{ BKP }}"
+        mode: 0700
+        state: directory

@@ -1,0 +1,4 @@
+- name: Start of configuring
+  hosts: all
+  roles:
+    - test

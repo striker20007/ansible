@@ -1,0 +1,100 @@
+##### bkp --> encrypt --> restore ?var ?etc
+- name: end of encrypt
+  remote_user: root
+  block:
+#    - name: encrypt users home dir
+#      shell: echo "{{ user_password }}" | ecryptfs-migrate-home -u "{{ item.user }}"
+#      with_items:
+#        - { user: "{{UNAME}}" }
+#        - { user: "{{BKP}}" }
+    
+#    - name: create .ssh for users in .ecryptfs
+#      shell: mkdir -p /home/.ecryptfs/{{item.user}}/.ssh
+#      with_items:
+#        - { user: "{{UNAME}}" }
+#        - { user: "{{BKP}}" }   
+
+#    - name: Set authorized key for users copying it from current user
+#      ansible.posix.authorized_key:
+#        user: "{{item}}"
+#        state: present
+#        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+#        path: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
+#        manage_dir: false
+#      with_items:
+#        - "{{UNAME}}"
+#        - "{{BKP}}"
+
+#    - name: create symlink to unencrypted home_dir
+#      shell: |
+#        mkdir -p /home/{{item}}/.ssh
+#        ln -s /home/.ecryptfs/{{item}}/.ssh/authorized_keys /home/{{item}}/.ssh/authorized_keys
+#      with_items:
+#        - "{{UNAME}}"
+#        - "{{BKP}}"
+
+    - name: login by users.
+      vars:
+        ips: "{{ groups['ubuntu'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+      local_action: ansible.builtin.shell sshpass -p {{user_password}} ssh -o 'StrictHostKeyChecking=no' {{item}}@{{ips}} "echo 'yahoo'"
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
+
+- name: remote user actions
+  block:
+    - name: mount home dir
+      remote_user: "{{item.user}}"
+      shell: echo {{user_password}} | ecryptfs-mount-private
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+    - name: create symlink to encrypted home dir
+      remote_user: "{{item.user}}"
+      shell: ln -s /home/.ecryptfs/{{item.user}}/.ssh/authorized_keys /home/{{item.user}}/.ssh/authorized_keys
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+    - name: save passphrase of users
+      remote_user: "{{ item.user }}"
+      shell: echo {{ user_password }} | ecryptfs-unwrap-passphrase >> /tmp/passphrase.{{item.user}};
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+    - name: Copy output passphrase
+      remote_user: "{{ item.user }}"
+      fetch:
+        src: /tmp/passphrase.{{item.user}}
+        dest: /var/ansible/test/files/{{ item.user }}/passphrase
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+    - name: remove passphrases
+      remote_user: "{{ item.user }}"
+      shell: rm /tmp/passphrase.{{item.user}}
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
+
+- name: end of encrypt
+  remote_user: root
+  block:
+    - name: remove home dir.old
+      shell: rm -r /home/{{ item }}.*
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
+
+    - name: encrypt swap
+      shell: ecryptfs-setup-swap -f
+      ignore_errors: true
+
+    - name: encrypt swap try2
+      shell: cryptdisks_start cryptswap1
+
+    - name: shred swap
+      shell: shred -vz /swapfile

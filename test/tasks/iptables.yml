@@ -1,0 +1,167 @@
+- name: set up iptables
+  remote_user: root
+  block:
+    - name: change dns
+      shell: echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+    - name: create blacklist
+      shell: ipset create blacklist hash:net && ipset create SSH hash:ip
+
+    - name: block spoof ip
+      shell: ipset add blacklist "{{ item }}"
+      with_items:
+        - "10.0.0.0/8"
+        - "169.254.0.0/16"
+        - "172.16.0.0/12"
+        - "192.168.0.0/24"
+        - "224.0.0.0/4"
+        - "240.0.0.0/5"
+        - "0.0.0.0/8"
+        - "239.255.255.0/24"
+        - "255.255.255.255"
+
+    - name: Flush iptables
+      shell: iptables -P INPUT ACCEPT && iptables -P OUTPUT ACCEPT && iptables -F && iptables -X && iptables -t mangle -F && iptables -t raw -F && iptables -t mangle -X && iptables -t raw -X
+
+    - name: ACCEPT ESTABLISHED and RELATED
+      shell: |
+        iptables -A INPUT ! -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT;
+        iptables -A OUTPUT ! -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT;
+
+    - name: ACCEPT lo conn
+      shell: |
+        iptables -A INPUT -i lo -j ACCEPT;
+        iptables -A OUTPUT -o lo -j ACCEPT;
+
+    - name: DROP INVALID packets
+      shell: |
+        iptables -A INPUT -m state --state INVALID -j DROP;
+        iptables -A OUTPUT -m state --state INVALID -j DROP;
+
+    - name: ACCEPT out http/https
+      shell: |
+        iptables -A OUTPUT -o $(ifconfig | grep flags | head -n 1 | cut -d " " -f 1 | sed s/://) -p tcp -m tcp -s $(ifconfig | grep inet | head -n 1 | cut -d " " -f10) -d 0/0 --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT;
+        iptables -A OUTPUT -o $(ifconfig | grep flags | head -n 1 | cut -d " " -f 1 | sed s/://) -p tcp -m tcp -s $(ifconfig | grep inet | head -n 1 | cut -d " " -f10) -d 0/0 --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT;
+
+    - name: ACCEPT out DNS
+      shell: iptables -A OUTPUT -o $(ifconfig | grep flags | head -n 1 | cut -d " " -f 1 | sed s/://) -p udp -s $(ifconfig | grep inet | head -n 1 | cut -d " " -f10) -d 8.8.8.8 --dport 53 -m state --state NEW -j ACCEPT;
+
+    - name: Drop packets from blacklist hash:net and log it
+      shell: |
+        iptables -t raw -A PREROUTING -m set --match-set blacklist src -j DROP;
+        iptables -t raw -I PREROUTING -m set --match-set blacklist src -j LOG --log-prefix "DROP blacklist entry";
+        iptables -t raw -I PREROUTING -m set --match-set SSH src -j LOG --log-prefix "DROP SSH entry";
+        iptables -t raw -A PREROUTING -m set --match-set SSH src -j DROP;
+        iptables -t raw -A PREROUTING -s 127.0.0.0/8 ! -i lo -j DROP;
+
+    - name: Prevent fragmentation of packets
+      shell: iptables -A INPUT -f -m comment --comment "Drop fragmented packets" -j DROP;
+
+    - name: Prevent ACK scan
+      shell: iptables -t mangle -A PREROUTING -p tcp ! --syn -m state --state NEW -j DROP;
+
+    - name: Prevent NULL scan
+      shell: |
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL NONE -m limit --limit 3/m --limit-burst 5 -j LOG --log-prefix "Firewall <-- Null scan ";
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL NONE -m recent --name blacklist_60 --set -j DROP;
+
+    - name: Prevent XMAS scan
+      shell: |
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN,PSH,URG -m limit --limit 3/m --limit-burst 5 -j LOG --log-prefix "Firewall <-- XMAS scan ";
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -m limit --limit 3/m --limit-burst 5 -j LOG --log-prefix "Firewall <-- XMAS-PSH scan ";
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL ALL -m limit --limit 3/m --limit-burst 5 -j LOG --log-prefix "Firewall <-- XMAS-ALL scan ";
+
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -m recent --name blacklist_60 --set -j DROP;
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN,PSH,URG -m recent --name blacklist_60 --set -j DROP;
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL ALL -m recent --name blacklist_60 --set -j DROP;
+
+    - name: Prevent FIN scan
+      shell: |
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN -m limit --limit 3/m --limit-burst 5 -j LOG --log-prefix "Firewall <-- FIN scan ";
+        iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN -m recent --name blacklist_60 --set -j DROP;
+
+    - name: Prevent SYN scan
+      shell: |
+        iptables -t mangle -A PREROUTING -p tcp -m multiport --dports  22,23,79,80,443 --tcp-flags ALL SYN -m limit --limit  3/m --limit-burst 5 -j LOG --log-prefix "Firewall <-- SYN scan trap: ";
+        iptables -t mangle -A PREROUTING -p tcp -m multiport --dports  22,23,79,80,443 --tcp-flags ALL SYN -m recent --name blacklist_180 --set -j DROP;
+
+    - name: Prevent UDP scan
+      shell: |
+        iptables -t mangle -A PREROUTING -p udp -m limit --limit  6/h --limit-burst 1 -m length --length  0:28 -j LOG --log-prefix "Firewall <-- 0 length udp ";
+        iptables -t mangle -A PREROUTING -p udp -m length --length  0:28 -j DROP;
+
+    - name: Create a new chain for SSH connections and secure from bruteforce ssh
+      shell: |
+        iptables -N SSH-LOG;
+        iptables -N SSH;
+        iptables -A INPUT -p tcp --syn --dport 33014 -m state --state NEW -j SSH;
+        iptables -A SSH -p tcp --syn --dport 33014 -m state --state NEW -m recent --name SSH --update --seconds 60 --hitcount 5 -j SSH-LOG;
+        iptables -A SSH -p tcp --syn --dport 33014 -m state --state NEW -m recent --name SSH --set;
+        iptables -A SSH -p tcp --syn --dport 33014 -m state --state NEW -j ACCEPT;
+
+    - name: LOG and DROP SSH bruteforce
+      shell: |
+        iptables -I SSH-LOG -p tcp --syn --dport 33014 -m state --state NEW -j LOG --log-prefix "SSH bruteforce";
+        iptables -A SSH-LOG -p tcp --syn --dport 33014 -m state --state NEW -j SET --add-set SSH src;
+        iptables -A SSH-LOG -p tcp --syn --dport 33014 -m state --state NEW -j DROP;
+
+    - name: ACCEPT out icmp
+      shell: |
+        iptables -A OUTPUT -o $(ifconfig | grep flags | head -n 1 | cut -d " " -f 1 | sed s/://) -p icmp --icmp-type 8 -s $(ifconfig | grep inet | head -n 1 | cut -d " " -f10) -d 0/0 -m state --state NEW,ESTABLISHED -j ACCEPT;
+        iptables -A INPUT -i $(ifconfig | grep flags | head -n 1 | cut -d " " -f 1 | sed s/://) -p icmp --icmp-type 0 -d $(ifconfig | grep inet | head -n 1 | cut -d " " -f10) -s 0/0 -m state --state ESTABLISHED -j ACCEPT;
+
+    - name: Limit new TCP connections per second per source IP
+      shell: |
+        iptables -A INPUT -p tcp -m state --state NEW -m limit --limit 60/s --limit-burst 20 -j ACCEPT;
+        iptables -t mangle -A PREROUTING -p tcp -m conntrack --ctstate NEW -m tcpmss ! --mss 536:65535 -j DROP;
+
+    - name: DROP politics
+      shell: |
+        iptables -P INPUT DROP;
+        iptables -P FORWARD DROP;
+        iptables -P OUTPUT DROP;
+
+    - name: save iptables
+      shell: |
+        iptables-save > /etc/iptables/rules.v4;
+        ipset save > /etc/iptables/ipset.v4;
+        netfilter-persistent save
+
+    - name: create ipset after reboot
+      shell:
+        echo "[Unit]" >> /etc/systemd/system/ipset-persistent.service;
+        echo "Description=ipset persistancy service" >> /etc/systemd/system/ipset-persistent.service;
+        echo "DefaultDependencies=no" >> /etc/systemd/system/ipset-persistent.service;
+        echo "Requires=netfilter-persistent.service"  >> /etc/systemd/system/ipset-persistent.service;
+        echo "Before=network.target" >> /etc/systemd/system/ipset-persistent.service;
+        echo "Before=netfilter-persistent.service"  >> /etc/systemd/system/ipset-persistent.service;
+        echo "ConditionFileNotEmpty=/etc/iptables/ipset.v4" >> /etc/systemd/system/ipset-persistent.service;
+ 
+        echo "[Service]" >> /etc/systemd/system/ipset-persistent.service;
+        echo "Type=oneshot" >> /etc/systemd/system/ipset-persistent.service;
+        echo "RemainAfterExit=yes" >> /etc/systemd/system/ipset-persistent.service;
+        echo "ExecStart=/sbin/ipset restore -f -! /etc/iptables/ipset.v4" >> /etc/systemd/system/ipset-persistent.service;
+
+        echo "ExecStop=/sbin/ipset save -f /etc/iptables/ipset.v4" >> /etc/systemd/system/ipset-persistent.service;
+ 
+        echo "[Install]">> /etc/systemd/system/ipset-persistent.service;
+        echo "WantedBy=multi-user.target" >> /etc/systemd/system/ipset-persistent.service;
+        echo "RequiredBy=netfilter-persistent.service" >> /etc/systemd/system/ipset-persistent.service;
+
+    - name: daemon_reload
+      ansible.builtin.systemd:
+        daemon_reload: true
+    
+    - name: start service
+      ansible.builtin.systemd:
+        name: ipset-persistent.service
+        state: started
+        enabled: true
+
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
+
+- name: Change ports in hosts
+  local_action: ansible.builtin.shell sed -i 's/ansible_port=22/ansible_port=33014/' /var/ansible/hosts.txt

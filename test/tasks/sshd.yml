@@ -1,0 +1,41 @@
+- name: set up ssh security
+  remote_user: root
+  shell: |
+    echo "# sshd_config - OpenSSH server configuration file" > /etc/ssh/sshd_config
+    echo "ListenAddress $(ifconfig | grep inet | head -n 1 | cut -d " " -f 10)" >> /etc/ssh/sshd_config
+    echo "# Port to listen on (change to a non-default port number)" >> /etc/ssh/sshd_config
+    echo "Port 33014" >> /etc/ssh/sshd_config
+    echo "# Disable password authentication in favor of public key authentication" >> /etc/ssh/sshd_config
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+    echo "ChallengeResponseAuthentication no" >> /etc/ssh/sshd_config
+    echo "UsePAM no" >> /etc/ssh/sshd_config
+    echo "# Allow only specific users to log in" >> /etc/ssh/sshd_config
+    echo "AllowUsers admin bkp_user root" >> /etc/ssh/sshd_config
+    echo "# Disable root login" >> /etc/ssh/sshd_config
+    echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config
+    echo "# Disable X11 forwarding" >> /etc/ssh/sshd_config
+    echo "X11Forwarding no" >> /etc/ssh/sshd_config
+    echo "# Restrict the list of available ciphers and MAC algorithms" >> /etc/ssh/sshd_config
+    echo "Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com" >> /etc/ssh/sshd_config
+    echo "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" >> /etc/ssh/sshd_config
+    echo "# Enable strict modes" >> /etc/ssh/sshd_config
+    echo "StrictModes yes" >> /etc/ssh/sshd_config
+    echo "# Disable TCP forwarding by default" >> /etc/ssh/sshd_config
+    echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config
+    echo "# Set a maximum authentication attempts before disconnecting" >> /etc/ssh/sshd_config
+    echo "MaxAuthTries 3" >> /etc/ssh/sshd_config
+    echo "# Disable empty passwords" >> /etc/ssh/sshd_config
+    echo "PermitEmptyPasswords no" >> /etc/ssh/sshd_config
+    echo "# Enable only the strongest key exchange algorithms" >> /etc/ssh/sshd_config
+    echo "KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256" >> /etc/ssh/sshd_config
+    echo "# Set a maximum login grace time before disconnecting" >> /etc/ssh/sshd_config
+    echo "LoginGraceTime 30s" >> /etc/ssh/sshd_config
+    echo "# Set a maximum idle time before disconnecting" >> /etc/ssh/sshd_config
+    echo "ClientAliveInterval 300" >> /etc/ssh/sshd_config
+    echo "ClientAliveCountMax 0" >> /etc/ssh/sshd_config
+    echo "# Set permissions on the user's authorized_keys file" >> /etc/ssh/sshd_config
+    echo "StrictModes yes" >> /etc/ssh/sshd_config
+    echo "# Set a maximum session time before disconnecting" >> /etc/ssh/sshd_config
+    echo "MaxSessions 3" >> /etc/ssh/sshd_config
+    echo "Subsystem       sftp    /usr/lib/openssh/sftp-server" >> /etc/ssh/sshd_config
+    echo "PrintMotd no" >> /etc/ssh/sshd_config

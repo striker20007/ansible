@@ -1,0 +1,53 @@
+# sshd_config - OpenSSH server configuration file
+
+# Port to listen on (change to a non-default port number)
+Port 33014
+
+# Disable password authentication in favor of public key authentication
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM no
+
+# Allow only specific users to log in
+AllowUsers admin bkp_user
+
+# Disable root login
+PermitRootLogin no
+
+# Disable X11 forwarding
+X11Forwarding no
+
+# Restrict the list of available ciphers and MAC algorithms
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+
+# Enable strict modes
+StrictModes yes
+
+# Disable TCP forwarding by default
+AllowTcpForwarding no
+
+# Set a maximum authentication attempts before disconnecting
+MaxAuthTries 3
+
+# Disable empty passwords
+PermitEmptyPasswords no
+
+# Enable only the strongest key exchange algorithms
+KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+
+# Set a maximum login grace time before disconnecting
+LoginGraceTime 30s
+
+# Set a maximum idle time before disconnecting
+ClientAliveInterval 300
+ClientAliveCountMax 0
+
+# Set permissions on the user's authorized_keys file
+StrictModes yes
+
+# Set a maximum session time before disconnecting
+MaxSessions 3
+
+Subsystem       sftp    /usr/lib/openssh/sftp-server
+PrintMotd no

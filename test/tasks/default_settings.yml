@@ -1,0 +1,82 @@
+- name: local actions
+  block:
+    - name: send public key
+      ansible.posix.authorized_key:
+        user: root
+        state: present
+        key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+
+    - name: Create ssh keys for user
+      local_action: community.crypto.openssh_keypair path=/var/ansible/test/files/{{item}}/id_rsa
+      with_items:
+        - "{{ UNAME }}"
+        - "{{ BKP }}"
+
+    - name: change inventory file
+      local_action: ansible.builtin.shell sed -i 's/ansible_password="[^"]*"//' /var/ansible/hosts.txt
+
+- name: update && minimize
+  remote_user: root
+  block:
+    - name: update repo.
+      apt:
+        update_cache: yes
+    - name: upgrade dist
+      apt:
+        upgrade: dist
+
+    - name: install default app.
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items:
+        - net-tools
+        - curl
+        - wget
+        - less
+        - python3-pip
+        - tree
+        - iptables-persistent
+        - ecryptfs-utils
+        - ipset
+        - deborphan
+        - policycoreutils
+        - selinux-utils
+        - selinux-basics
+        - selinux-policy-mls
+
+    - name: apt autoremove.
+      apt:
+        autoremove: yes
+    - name: apt clean
+      shell: apt clean
+    - name: apt autoclean
+      apt:
+        autoclean: yes
+    - name: remove with deborphan
+      shell: deborphan > pckgs_del.txt && apt --purge remove $(cat pckgs_del.txt) -y && rm pckgs_del.txt
+    - name: remove old services
+      shell: apt --purge remove "{{ item }}" -y
+      ignore_errors: true
+      with_items:
+        - telnet
+        - rsh-client
+        - rsh-redone-client
+        - nis
+        - yp-tools
+        - openldap-clients
+        - openldap2-client
+        - bind9-host
+        - bind9utils
+        - ftp
+        - xinetd
+        - cups
+        - whoopsie
+        - apparmor
+
+    - name: time
+      shell: timedatectl set-timezone {{time_zone}}
+
+    - name: locale settings
+      shell: locale-gen {{locale1}} && update-locale LANG={{locale2}} LC_TIME={{locale1}}
+
+    - name: reboot after update
+      ansible.builtin.reboot:

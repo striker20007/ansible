@@ -1,0 +1,21 @@
+- name: setup grub security
+  remote_user: root
+  block:
+    - name: Configure GRUB2
+      shell: |
+        echo 'GRUB_DEFAULT=0' > /etc/default/grub
+        echo 'GRUB_TIMEOUT_STYLE=hidden' >> /etc/default/grub
+        echo 'GRUB_TIMEOUT=0' >> /etc/default/grub
+        echo "GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Ubuntu`" >> /etc/default/grub
+        echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet nousb splash"' >> /etc/default/grub
+        echo 'GRUB_CMDLINE_LINUX="find_preseed=/preseed.cfg auto noprompt priority=critical locale=en_US nousb"' >> /etc/default/grub
+        echo 'GRUB_DISABLE_RECOVERY="true"' >> /etc/default/grub
+
+    - name: unrestricted boot
+      shell: sed -i "s/^\(.*\)\(\$menuentry_id_option 'gnulinux-simple-\$boot_device_id' {.*\)$/\1--unrestricted \2/" /etc/grub.d/10_linux
+
+    - name: 
+      shell: echo 'set superusers="{{grub_superuser}}"\npassword_pbkdf2 {{grub_superuser}} {{root_grub_pass}}\n' >> /etc/grub.d/40_custom
+
+    - name: change /boot/grub/grub.cfg
+      shell: grub-mkconfig -o /boot/grub/grub.cfg

@@ -1,0 +1,34 @@
+- name: create backup
+  remote_user: root
+  block:
+    - name: create script file
+      file:
+        path: "/usr/local/bin/daily_update.sh"
+        owner: root
+        group: root
+        mode: 0700
+        state: touch
+
+    - name: create a script for backups
+      shell: |
+        echo "#!/bin/bash" >> /usr/local/bin/daily_update.sh;
+        echo "rsync -avz -H /etc /var/log /var/lib /opt /usr/lib /home /home/{{ BKP }}/backups/$(date +%d-%m-%Y) 2>/dev/null" >> /usr/local/bin/daily_update.sh;
+        echo "apt update && apt upgrade -y 2>/dev/null" >> /usr/local/bin/daily_update.sh;
+        echo "apt autoremove -y 2>/dev/null" >> /usr/local/bin/daily_update.sh;
+        echo "apt autoclean -y 2>/dev/null" >> /usr/local/bin/daily_update.sh;
+        echo "apt clean -y 2>/dev/null" >> /usr/local/bin/daily_update.sh;
+        echo "deborphan > /home/{{ BKP }}/to_remove && apt --purge remove $(cat /home/{{ BKP }}/to_remove) && rm /home/{{ BKP }}/to_remove 2>/dev/null" >> /usr/local/bin/daily_update.sh;
+        echo "find /home/{{BKP}}/backups/ -type f -mtime +1 -exec rm {} \;" >> /usr/local/bin/daily_update.sh;
+
+    - name: access to script
+      shell: echo "{{BKP}} ALL=(root) NOPASSWD:/usr/local/bin/daily_update.sh" >> /etc/sudoers
+
+- name: remote user for cron
+  remote_user: "{{ BKP }}"
+  block:
+    - name: set up cronjob
+      cron:
+        name: Run daily update and backup
+        minute: 0
+        hour: 7
+        job: "/usr/local/bin/daily_update.sh"
