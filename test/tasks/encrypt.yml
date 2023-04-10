@@ -1,39 +1,13 @@
-##### bkp --> encrypt --> restore ?var ?etc
 - name: end of encrypt
   remote_user: root
   block:
-#    - name: encrypt users home dir
-#      shell: echo "{{ user_password }}" | ecryptfs-migrate-home -u "{{ item.user }}"
-#      with_items:
-#        - { user: "{{UNAME}}" }
-#        - { user: "{{BKP}}" }
-    
-#    - name: create .ssh for users in .ecryptfs
-#      shell: mkdir -p /home/.ecryptfs/{{item.user}}/.ssh
-#      with_items:
-#        - { user: "{{UNAME}}" }
-#        - { user: "{{BKP}}" }   
+    - name: encrypt users home dir
+      shell: echo "{{ user_password }}" | ecryptfs-migrate-home -u "{{ item.user }}"
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
 
-#    - name: Set authorized key for users copying it from current user
-#      ansible.posix.authorized_key:
-#        user: "{{item}}"
-#        state: present
-#        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
-#        path: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
-#        manage_dir: false
-#      with_items:
-#        - "{{UNAME}}"
-#        - "{{BKP}}"
-
-#    - name: create symlink to unencrypted home_dir
-#      shell: |
-#        mkdir -p /home/{{item}}/.ssh
-#        ln -s /home/.ecryptfs/{{item}}/.ssh/authorized_keys /home/{{item}}/.ssh/authorized_keys
-#      with_items:
-#        - "{{UNAME}}"
-#        - "{{BKP}}"
-
-    - name: login by users.
+    - name: login by users
       vars:
         ips: "{{ groups['ubuntu'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
       local_action: ansible.builtin.shell sshpass -p {{user_password}} ssh -o 'StrictHostKeyChecking=no' {{item}}@{{ips}} "echo 'yahoo'"
@@ -43,12 +17,23 @@
 
 - name: remote user actions
   block:
-    - name: mount home dir
+    - name: create .ssh for users in .ecryptfs
       remote_user: "{{item.user}}"
-      shell: echo {{user_password}} | ecryptfs-mount-private
+      shell: mkdir -p /home/.ecryptfs/{{item.user}}/.ssh
       with_items:
         - { user: "{{UNAME}}" }
         - { user: "{{BKP}}" }
+
+    - name: Set authorized key for users copying it from current user
+      ansible.posix.authorized_key:
+        user: "{{item}}"
+        state: present
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        path: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
+        manage_dir: false
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
 
     - name: create symlink to encrypted home dir
       remote_user: "{{item.user}}"
@@ -56,6 +41,17 @@
       with_items:
         - { user: "{{UNAME}}" }
         - { user: "{{BKP}}" }
+
+    - name: create symlink to unencrypted home_dir
+      remote_user: "{{item}}"
+      shell: |
+        ecryptfs-umount-private
+        mkdir -p /home/{{item}}/.ssh
+        ln -s /home/.ecryptfs/{{item}}/.ssh/authorized_keys /home/{{item}}/.ssh/authorized_keys
+        echo {{user_password}} | ecryptfs-mount-private
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
 
     - name: save passphrase of users
       remote_user: "{{ item.user }}"

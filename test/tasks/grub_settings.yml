@@ -14,7 +14,7 @@
     - name: unrestricted boot
       shell: sed -i "s/^\(.*\)\(\$menuentry_id_option 'gnulinux-simple-\$boot_device_id' {.*\)$/\1--unrestricted \2/" /etc/grub.d/10_linux
 
-    - name: 
+    - name: set root for grub
       shell: echo 'set superusers="{{grub_superuser}}"\npassword_pbkdf2 {{grub_superuser}} {{root_grub_pass}}\n' >> /etc/grub.d/40_custom
 
     - name: change /boot/grub/grub.cfg

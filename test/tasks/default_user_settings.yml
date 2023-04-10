@@ -46,34 +46,14 @@
         - { user: "{{UNAME}}" }
         - { user: "{{BKP}}" }
 
-#    - name: create authorized_keys for users
-#      file:
-#        path: "/home/{{item.user}}/.ssh/authorized_keys"
-#        owner: "{{ item.user }}"
-#        group: "{{ item.user }}"
-#        mode: 0600
-#        state: touch
-#      with_items:
-#        - { user: "{{UNAME}}" }
-#        - { user: "{{BKP}}" }
-
-#    - name: Set authorized key for users copying it from current user
-#      ansible.posix.authorized_key:
-#        user: "{{item}}"
-#        state: present
-#        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
-#      with_items:
-#        - "{{UNAME}}"
-#        - "{{BKP}}"
-
-#    - name: send public key
-#      ansible.posix.authorized_key:
-#        user: "{{ item.user }}"
-#        state: present
-#        key: "{{ lookup('file', '{{host_keys}}/{{item.user}}/id_rsa.pub') }}"
-#      with_items:
-#        - { user: "{{UNAME}}" }
-#        - { user: "{{BKP}}" }
+    - name: Set authorized key for users copying it from current user
+      ansible.posix.authorized_key:
+        user: "{{item}}"
+        state: present
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
 
     - name: add admin to admin group
       shell: usermod -aG adm,sudo {{UNAME}}

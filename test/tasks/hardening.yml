@@ -82,7 +82,7 @@
         echo "\$RotateInterval 1" >> /etc/rsyslog.conf
         echo "\$RotateLogFile /var/log/syslog" >> /etc/rsyslog.conf
         echo "\$IncludeConfig /etc/rsyslog.d/*.conf" >> /etc/rsyslog.conf
-    
+
     - name: disable usb
       shell: |
         echo "install usb-storage /bin/true" >> /etc/modprobe.d/no-usb
