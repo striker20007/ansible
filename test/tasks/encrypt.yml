@@ -17,12 +17,13 @@
 
 - name: remote user actions
   block:
-    - name: create .ssh for users in .ecryptfs
-      remote_user: "{{item.user}}"
-      shell: mkdir -p /home/.ecryptfs/{{item.user}}/.ssh
-      with_items:
-        - { user: "{{UNAME}}" }
-        - { user: "{{BKP}}" }
+    - name: create .ssh for admin in .ecryptfs
+      remote_user: "{{UNAME}}"
+      shell: mkdir /home/.ecryptfs/{{UNAME}}/.ssh
+    
+    - name: create .ssh for bkp_user in .ecryptfs
+      remote_user: "{{ BKP }}"
+      shell: mkdir /home/.ecryptfs/{{BKP}}/.ssh
 
     - name: Set authorized key for users copying it from current user
       ansible.posix.authorized_key:
@@ -35,19 +36,24 @@
         - "{{UNAME}}"
         - "{{BKP}}"
 
-    - name: create symlink to encrypted home dir
-      remote_user: "{{item.user}}"
-      shell: ln -s /home/.ecryptfs/{{item.user}}/.ssh/authorized_keys /home/{{item.user}}/.ssh/authorized_keys
-      with_items:
-        - { user: "{{UNAME}}" }
-        - { user: "{{BKP}}" }
+    - name: create symlink to encrypted home dir of admin
+      remote_user: "{{UNAME}}"
+      shell: |
+        rm /home/{{UNAME}}/.ssh/authorized_keys;
+        ln -s /home/.ecryptfs/{{UNAME}}/.ssh/authorized_keys /home/{{UNAME}}/.ssh/authorized_keys;
+ 
+    - name: create symlink to encrypted home dir of bkp
+      remote_user: "{{ BKP }}"
+      shell: |
+        rm /home/{{BKP}}/.ssh/authorized_keys;
+        ln -s /home/.ecryptfs/{{BKP}}/.ssh/authorized_keys /home/{{BKP}}/.ssh/authorized_keys;
 
     - name: create symlink to unencrypted home_dir
       remote_user: "{{item}}"
       shell: |
-        ecryptfs-umount-private
-        mkdir -p /home/{{item}}/.ssh
-        ln -s /home/.ecryptfs/{{item}}/.ssh/authorized_keys /home/{{item}}/.ssh/authorized_keys
+        ecryptfs-umount-private;
+        mkdir -p /home/{{item}}/.ssh;
+        ln -s /home/.ecryptfs/{{item}}/.ssh/authorized_keys /home/{{item}}/.ssh/authorized_keys;
       with_items:
         - "{{UNAME}}"
         - "{{BKP}}"

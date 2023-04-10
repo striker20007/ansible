@@ -16,6 +16,7 @@
         password: "{{ user_password | password_hash('sha512') }}"
         uid: "{{item.user_id}}"
         group: "{{item.user}}"
+        groups: sudo
         state: present
         update_password: on_create
         home: "/home/{{item.user}}"
@@ -55,8 +56,11 @@
         - "{{UNAME}}"
         - "{{BKP}}"
 
-    - name: add admin to admin group
-      shell: usermod -aG adm,sudo {{UNAME}}
+  #  - name: add admin to admin group
+  #    shell: usermod -aG adm,sudo {{item}}
+  #    with_items:
+  #      - "{{ UNAME }}"
+ #       - "{{ BKP }}"
 
     - name: create backups dir
       file:
