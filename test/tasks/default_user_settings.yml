@@ -16,7 +16,6 @@
         password: "{{ user_password | password_hash('sha512') }}"
         uid: "{{item.user_id}}"
         group: "{{item.user}}"
-        groups: sudo
         state: present
         update_password: on_create
         home: "/home/{{item.user}}"
@@ -27,40 +26,28 @@
 
     - name: create home directory for users
       file:
-        path: "/home/{{item.user}}"
-        owner: "{{item.user}}"
-        group: "{{item.user}}"
+        path: "/home/{{item}}"
+        owner: "{{item}}"
+        group: "{{item}}"
         mode: 0700
         state: directory
-      with_items:
-        - { user: "{{UNAME}}" }
-        - { user: "{{BKP}}" }
-
-    - name: create .ssh dir
-      file:
-        path: "/home/{{item.user}}/.ssh"
-        owner: "{{ item.user }}"
-        group: "{{ item.user }}"
-        mode: 0700
-        state: directory
-      with_items:
-        - { user: "{{UNAME}}" }
-        - { user: "{{BKP}}" }
-
-    - name: Set authorized key for users copying it from current user
-      ansible.posix.authorized_key:
-        user: "{{item}}"
-        state: present
-        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
       with_items:
         - "{{UNAME}}"
         - "{{BKP}}"
 
-  #  - name: add admin to admin group
-  #    shell: usermod -aG adm,sudo {{item}}
-  #    with_items:
-  #      - "{{ UNAME }}"
- #       - "{{ BKP }}"
+    - name: create .ssh dir
+      file:
+        path: "/home/{{item}}/.ssh"
+        owner: "{{ item }}"
+        group: "{{ item }}"
+        mode: 0700
+        state: directory
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
+
+    - name: add admin to admin group
+      shell: usermod -aG adm,sudo {{UNAME}}
 
     - name: create backups dir
       file:

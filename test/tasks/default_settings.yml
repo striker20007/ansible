@@ -72,6 +72,10 @@
         - whoopsie
         - apparmor
 
+    - name: Install bottle python package
+      ansible.builtin.pip:
+        name: pkexpect
+
     - name: time
       shell: timedatectl set-timezone {{time_zone}}
 

@@ -105,12 +105,12 @@
 
     - name: send public key
       ansible.posix.authorized_key:
-        user: "{{ item.user }}"
+        user: "{{ item }}"
         state: present
-        key: "{{ lookup('file', '{{host_keys}}/{{item.user}}/id_rsa.pub') }}"
+        key: "{{ lookup('file', '{{host_keys}}/{{item}}/id_rsa.pub') }}"
         exclusive: true
         path: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
         manage_dir: false
       with_items:
-        - { user: "{{UNAME}}" }
-        - { user: "{{BKP}}" }
+        - "{{UNAME}}"
+        - "{{BKP}}"
