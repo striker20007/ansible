@@ -5,11 +5,10 @@
 #- include_tasks: default_settings.yml
 
 ##### install default user settings
-#- include_tasks: default_user_settings.yml
+- include_tasks: default_user_settings.yml
 
 ##### encrypt sensetive data
 - include_tasks: encrypt.yml
-
 ##### setting up backup
 #- include_tasks: backup.yml
 

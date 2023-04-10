@@ -48,10 +48,15 @@
         ecryptfs-umount-private
         mkdir -p /home/{{item}}/.ssh
         ln -s /home/.ecryptfs/{{item}}/.ssh/authorized_keys /home/{{item}}/.ssh/authorized_keys
-        echo {{user_password}} | ecryptfs-mount-private
       with_items:
         - "{{UNAME}}"
         - "{{BKP}}"
+
+    - name: Mount private directory
+      expect:
+        command: ecryptfs-mount-private
+        responses:
+          "Enter your login passphrase": "{{ user_password }}"
 
     - name: save passphrase of users
       remote_user: "{{ item.user }}"
