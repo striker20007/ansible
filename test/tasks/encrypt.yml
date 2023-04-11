@@ -95,7 +95,7 @@
       fetch:
         src: /tmp/passphrase.{{BKP}}
         dest: /var/ansible/test/files/{{ BKP }}/passphrase
-    ######## dodelat
+
     - name: remove passphrases
       remote_user: root
       shell: rm /tmp/passphrase.{{item.user}}
