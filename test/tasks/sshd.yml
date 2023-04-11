@@ -10,9 +10,9 @@
     echo "ChallengeResponseAuthentication no" >> /etc/ssh/sshd_config
     echo "UsePAM no" >> /etc/ssh/sshd_config
     echo "# Allow only specific users to log in" >> /etc/ssh/sshd_config
-    echo "AllowUsers admin bkp_user root" >> /etc/ssh/sshd_config
+    echo "AllowUsers admin bkp_user" >> /etc/ssh/sshd_config
     echo "# Disable root login" >> /etc/ssh/sshd_config
-    echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config
+    echo "PermitRootLogin" >> /etc/ssh/sshd_config
     echo "# Disable X11 forwarding" >> /etc/ssh/sshd_config
     echo "X11Forwarding no" >> /etc/ssh/sshd_config
     echo "# Restrict the list of available ciphers and MAC algorithms" >> /etc/ssh/sshd_config
@@ -39,3 +39,4 @@
     echo "MaxSessions 3" >> /etc/ssh/sshd_config
     echo "Subsystem       sftp    /usr/lib/openssh/sftp-server" >> /etc/ssh/sshd_config
     echo "PrintMotd no" >> /etc/ssh/sshd_config
+    echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
