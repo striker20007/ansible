@@ -2,24 +2,25 @@
 # tasks file for test
 
 ##### install default setting and apt
-#- include_tasks: default_settings.yml
+- include_tasks: default_settings.yml
 
 ##### install default user settings
 - include_tasks: default_user_settings.yml
 
 ##### encrypt sensetive data
 - include_tasks: encrypt.yml
+
 ##### setting up backup
-#- include_tasks: backup.yml
+- include_tasks: backup.yml
 
 ##### change grub settings
-#- include_tasks: grub_settings.yml
+- include_tasks: grub_settings.yml
 
 ##### change sysctl and rsyslog
-#- include_tasks: hardening.yml
+- include_tasks: hardening.yml
 
 ##### change sshd settings
-#- include_tasks: sshd.yml
+- include_tasks: sshd.yml
 
 ##### change iptables
-#- include_tasks: iptables.yml
+- include_tasks: iptables.yml
