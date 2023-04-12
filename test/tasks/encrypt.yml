@@ -85,23 +85,22 @@
       shell: echo {{ user_password }} | ecryptfs-unwrap-passphrase >> /tmp/passphrase.{{BKP}};
 
     - name: Copy output passphrase
-      remote_user: "{{ UNAME }}"
+      remote_user: root
       fetch:
-        src: /tmp/passphrase.{{UNAME}}
-        dest: /var/ansible/test/files/{{ UNAME }}/passphrase
-
-    - name: Copy output passphrase
-      remote_user: "{{ BKP }}"
-      fetch:
-        src: /tmp/passphrase.{{BKP}}
-        dest: /var/ansible/test/files/{{ BKP }}/passphrase
+        src: /tmp/passphrase.{{item}}
+        dest: /var/ansible/test/files/passphrase
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
 
     - name: remove passphrases
       remote_user: root
-      shell: rm /tmp/passphrase.{{item.user}}
+      ansible.builtin.file:
+        path: /tmp/passphrase.{{item.user}}
+        state: absent
       with_items:
-        - { user: "{{UNAME}}" }
-        - { user: "{{BKP}}" }
+        - "{{UNAME}}"
+        - "{{BKP}}"
 
 - name: end of encrypt
   remote_user: root

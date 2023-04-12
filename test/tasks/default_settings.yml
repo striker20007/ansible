@@ -39,12 +39,10 @@
         - ipset
         - deborphan
         - policycoreutils
-        - selinux-policy-doc
+        - policycoreutils-gui
         - selinux-policy-doc
         - selinux-utils
         - selinux-basics
-        - selinux-policy-mls
-        - auditd
         - auditd
 
     - name: apt autoremove.

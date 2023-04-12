@@ -12,7 +12,7 @@
     echo "# Allow only specific users to log in" >> /etc/ssh/sshd_config
     echo "AllowUsers admin bkp_user" >> /etc/ssh/sshd_config
     echo "# Disable root login" >> /etc/ssh/sshd_config
-    echo "PermitRootLogin" >> /etc/ssh/sshd_config
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config
     echo "# Disable X11 forwarding" >> /etc/ssh/sshd_config
     echo "X11Forwarding no" >> /etc/ssh/sshd_config
     echo "# Restrict the list of available ciphers and MAC algorithms" >> /etc/ssh/sshd_config
