@@ -1,65 +1,23 @@
-#- name: start encryption
-#  remote_user: root
-#  block:
-#    - name: ecryptfs-migrate-home encrypting
-#      shell: echo "{{ user_password }}" | ecryptfs-migrate-home -u "{{ item.user }}"
-#      with_items:
-#        - { user: "{{UNAME}}" }
-#        - { user: "{{BKP}}" }
-
-#    - name: create .ssh in unencrypted dir for users
-#      file:
-#        path: /home/{{item}}/.ssh
-#        owner: "{{ item }}"
-#        group: "{{ item }}"
-#        mode: 0700
-#        state: directory
-#      with_items:
-#        - "{{UNAME}}"
-#        - "{{BKP}}"
-
-#    - name: Set authorized key for users copying it from current user
-#      ansible.posix.authorized_key:
-#        user: "{{item}}"
-#        state: present
-#        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
-#        path: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
-#        manage_dir: false
-#      with_items:
-#        - "{{UNAME}}"
-#        - "{{BKP}}"
-
-#    - name: Create a symbolic link for keys from .ecryptfs
-#      ansible.builtin.file:
-#        src: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
-#        dest: /home/{{item}}/.ssh/authorized_keys
-#        owner: "{{item}}"
-#        group: "{{item}}"
-#        state: link
-#      with_items:
-#        - "{{UNAME}}"
-#        - "{{BKP}}"
-
-- name: remote user actions
+- name: start encryption
+  remote_user: root
   block:
-    - name: Mount home dir for admin
-      remote_user: "{{UNAME}}"
-      expect:
-        command: ecryptfs-mount-private
-        responses:
-          "Enter your login passphrase": "{{ user_password }}"
-    - name: Mount home dir for bkp_user
-      remote_user: "{{BKP}}"
-      expect:
-        command: ecryptfs-mount-private
-        responses:
-          "Enter your login passphrase": "{{ user_password }}"
+    - name: ecryptfs-migrate-home encrypting
+      shell: echo "{{ user_password }}" | ecryptfs-migrate-home -u "{{ item.user }}"
+      with_items:
+        - { user: "{{UNAME}}" }
+        - { user: "{{BKP}}" }
 
-    - name: remove old auth_keys
-      remote_user: root
-      ansible.builtin.file:
-        path: /home/{{item}}/.ssh/authorized_keys
-        state: absent
+    - name: create .ssh in unencrypted dir for users
+      file:
+        path: /home/{{item}}/.ssh
+        owner: "{{ item }}"
+        group: "{{ item }}"
+        mode: 0700
+        state: directory
+      with_items:
+        - "{{UNAME}}"
+        - "{{BKP}}"
+
     - name: Set authorized key for users copying it from current user
       ansible.posix.authorized_key:
         user: "{{item}}"
@@ -71,14 +29,6 @@
         - "{{UNAME}}"
         - "{{BKP}}"
 
-    - name: create symlink to encrypted home dir of users
-      remote_user: root
-      ansible.builtin.file:
-        src: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
-        dest: /home/{{item}}/.ssh/authorized_keys
-        owner: "{{item}}"
-        group: "{{item}}"
-        state: link
     - name: Create a symbolic link for keys from .ecryptfs
       ansible.builtin.file:
         src: /home/.ecryptfs/{{item}}/.ssh/authorized_keys
