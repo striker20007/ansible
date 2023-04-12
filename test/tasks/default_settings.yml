@@ -40,9 +40,11 @@
         - deborphan
         - policycoreutils
         - selinux-policy-doc
+        - selinux-policy-doc
         - selinux-utils
         - selinux-basics
         - selinux-policy-mls
+        - auditd
         - auditd
 
     - name: apt autoremove.
@@ -73,6 +75,10 @@
         - cups
         - whoopsie
         - apparmor
+
+    - name: Install bottle python package
+      ansible.builtin.pip:
+        name: pexpect
 
     - name: time
       shell: timedatectl set-timezone {{time_zone}}
