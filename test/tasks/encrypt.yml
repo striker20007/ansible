@@ -96,7 +96,7 @@
     - name: remove passphrases
       remote_user: root
       ansible.builtin.file:
-        path: /tmp/passphrase.{{item.user}}
+        path: /tmp/passphrase.{{item}}
         state: absent
       with_items:
         - "{{UNAME}}"
